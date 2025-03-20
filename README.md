@@ -1,7 +1,6 @@
 # SelfieAI
 This app allows users to generate selfies with ideally 1-3 other people while only needing a prompt, and individual photos of each person as references. The base model being used
-is Stable Diffusion XL, with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, DreamBooth will be used to train
-the model to recreate the style of selfies taken on a typical mobile phone camera in both portrait and landscape.
+is Stable Diffusion XL, with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, Low Rank Adaptation (LoRA) will be used to train the model to recreate the style of selfies taken on a typical mobile phone camera in both portrait and landscape.
 
 ## System Requirements
 SelfieAI as of March 2025 runs locally thus requiring at least 8GB of VRAM to generate images.
