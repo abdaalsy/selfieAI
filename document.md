@@ -12,19 +12,28 @@ This took way too long for no reason. I needed to install `automatic1111` which 
 
 ## The first images
 With the prompt: "A photo-realistic portrait of an 18 year old Pakistani male. He weighs 140lbs, height of 180cm, is slightly lean, palish-tan complexion, has dark brown curly hair that reaches eyebrows, is clean shaven, has a slightly large nose and slightly close together eyes, and has slightly larger lips." I clicked generate and saw my GPU usage jump to 100% and my VRAM max out. The result:
+
 ![The first image](photos/first_photo.png)
+
 Was not what I was expecting. Trying the generation again with the same prompt I got: 
+
 ![The second image](photos/first_photo1.png)
+
 Not really sure why it looks like a magazine cover.
 
 At this point I thought that it might be over, luckily I remembered that ChatGPT suggested I use a pre-trained model called RealisticVision alongside SDXL which specializes in generating unrealistic images. I downloaded [version 5.1 Hyper](https://civitai.com/models/4201?modelVersionId=501240) and dropped it into `stable-diffusion-webui/models/Stable-diffusion`. 
 
 ## The second images
 With the same prompt as before, these were some of my results:
+
 ![Image generated with Realistic Vision](photos/second_photo.png)
+
 ![Image generated with Realistic Vision](photos/second_photo1.png)
+
 After tweaking some settings suggested [here](https://civitai.com/models/4201?modelVersionId=501240), I was able to get this:
+
 ![The best image yet](photos/second_photo2.png)
+
 This actually looks real!
 
 
