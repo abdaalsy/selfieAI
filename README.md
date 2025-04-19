@@ -17,6 +17,7 @@ This future web app uses individual photos of two people, and can combine them i
 | RTX 4070 SUPER   | ~0.9 seconds                         |
 | RTX 4080         | ~0.7 seconds                         |
 | RTX 4090         | ~0.6 seconds                         |
+
 This data was provided by ChatGPT, so it might not be reliable.
 
 ## Plans for the Future
