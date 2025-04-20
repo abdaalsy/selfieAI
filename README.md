@@ -1,5 +1,5 @@
 # SelfieAI
-This future web app uses individual photos of two people, and can combine them into a selfie. The base model being used is Stable Diffusion 1.5, with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, Low Rank Adaptation (LoRA) will be used to train the model to recreate the style of selfies taken on a typical mobile phone camera in landscape.
+This future web app uses individual photos of two people, and can combine them into a selfie. The user provides an image of each of the two people, and a prompt specifying information about the scene. The output is (hopefully) what they have in mind, though this is up to the model I use. The base model being used is Stable Diffusion 1.5, with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, Low Rank Adaptation (LoRA) will be used to train the model to recreate the style of selfies taken on a typical mobile phone camera in landscape, including 2 people.
 
 ## System Requirements
 | **GPU Model**        | **Approximate Time per Image (512x512)** |
