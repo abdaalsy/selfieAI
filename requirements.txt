@@ -6,3 +6,4 @@ diffusers
 accelerate
 safetensors
 tqdm
+numpy
