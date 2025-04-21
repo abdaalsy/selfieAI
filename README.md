@@ -1,24 +1,5 @@
 # SelfieAI
-This future web app uses individual photos of two people, and can combine them into a selfie. The user provides an image of each of the two people, and a prompt specifying information about the scene. The output is (hopefully) what they have in mind, though this is up to the model I use. The base model being used is Stable Diffusion 1.5, with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, Low Rank Adaptation (LoRA) will be used to train the model to recreate the style of selfies taken on a typical mobile phone camera in landscape, including 2 people.
-
-## System Requirements
-| **GPU Model**        | **Approximate Time per Image (512x512)** |
-|------------------|--------------------------------------|
-| GTX 1660 Ti      | ~25 seconds                          |
-| RTX 2060         | ~20 seconds                          |
-| GTX 1080 Ti      | ~15 seconds                          |
-| RTX 2080         | ~10 seconds                          |
-| RTX 3060 Ti      | ~1.8 seconds                         |
-| RTX 3060 12GB    | ~1.8 seconds                         |
-| RTX 3070         | ~1.5 seconds                         |
-| RTX 3080         | ~1.2 seconds                         |
-| RTX 3090         | ~0.9 seconds                         |
-| RTX 4070         | ~2.7 seconds                         |
-| RTX 4070 SUPER   | ~0.9 seconds                         |
-| RTX 4080         | ~0.7 seconds                         |
-| RTX 4090         | ~0.6 seconds                         |
-
-This data was provided by ChatGPT, so it might not be reliable.
+This program generates selfies of me and my friend according to a text prompt. The output is (hopefully) close to the prompt, though this is up to the text encoder of the model I use. The base model being used is Stable Diffusion 1.5 (SD1.5), with RealisticVision fine-tuning the model for photorealistic images. Since photorealistic images is a wide category, Low Rank Adaptation (LoRA) will be used to train the model to generate pictures of me and my friend, taken in a selfie style on a typical mobile phone camera.
 
 ## Plans for the Future
-I hope to deploy this to the web someday. I'd likely use a RunPod cloud GPU to handle all the heavy processing so that any device can use selfieAI. I'm completely new to AI/ML, so for now I'm going to focus on training this model to give some good results. Good thing SD is open-source cus my minimum wage job ain't paying for no subscription.
+My original idea was an AI that could generate selfies of any two people so long as images of them were provided. But in my research I found out that training this model would require me to gather reference images of hundreds, maybe thousands of people. I don't have the capability for that so I downsized the program to just me and my friend as a proof of concept, but I do hope to implement my original idea someday. If that happens, it would be sick to get it deployed on the web, free for anyone to use. I'd use a cloud GPU to handle all the heavy processing so that any device can use SelfieAI. I have 0 experience with AI/ML, so I'm going to focus on learning about its inner working. Good thing SD1.5 is open-source cus my minimum wage job ain't paying for no subscription.
