@@ -75,7 +75,7 @@ def parse_args():
     parser.add_argument(
         "-m", "--model_path",
         type=check_dir,
-        default="../RealisticVision",
+        default="./RealisticVision",
         required=False,
         help="Path to the folder containing the image generation model."
     )
@@ -107,7 +107,6 @@ def main():
     args = parse_args()
 
     torch_device = args.device
-    print(args.device)
     unet = UNet2DConditionModel.from_pretrained(args.model_path, subfolder="unet").to(torch_device)
     vae = AutoencoderKL.from_pretrained(args.model_path, subfolder="vae").to(torch_device)
     scheduler = UniPCMultistepScheduler.from_pretrained(args.model_path, subfolder="scheduler")
