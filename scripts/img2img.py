@@ -1,3 +1,5 @@
+#Relic from when I thought the original idea was still possible
+
 from PIL import Image
 from PIL.ImageOps import fit
 from tqdm.auto import tqdm
