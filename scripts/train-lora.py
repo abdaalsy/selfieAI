@@ -358,4 +358,13 @@ def main():
             progress_bar.set_postfix(**logs)
 
             if global_step >= args.max_train_steps:
-                break             
+                break
+
+    #Save LoRA Layers
+    unet = unet.to(torch.float32)
+    unet.save_attn_procs(args.output_dir)
+
+    accelerator.end_training()    
+
+if __name__ == "__main__":
+    main()         
