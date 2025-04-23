@@ -9,6 +9,7 @@ import os
 import numpy
 import random
 import math
+import shutil
 
 from tqdm.auto import tqdm
 from pathlib import Path
@@ -19,6 +20,7 @@ from transformers import CLIPTokenizer, CLIPTextModel
 from datasets import load_dataset
 from torchvision import transforms
 from diffusers.optimization import get_constant_schedule_with_warmup
+import torch.nn.functional as F
 
 import diffusers
 from diffusers import UNet2DConditionModel, UniPCMultistepScheduler, AutoencoderKL
@@ -115,9 +117,10 @@ def main():
     epsilon = 1e-08
     weight_decay = 1e-2
     batch_size = 16
-    gradient_accumulation_steps = 8
+    gradient_accumulation_steps = 4
     num_epochs = 20
     warmup_steps = 500
+    max_grad_norm = 1.0
 
     accelerator = Accelerator(
         gradient_accumulation_steps=1,
@@ -232,16 +235,16 @@ def main():
     train_dataset = dataset["train"].with_transform(preprocess_train)
 
     def collate_fn(examples):
-        pixel_values = torch.stack([example["pixel_values"] for example in examples])
+        pixel_values = torch.stack([example["pixel_values"] for example in examples])   #Combine all image tensors into one per batch
         pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
-        input_ids = torch.stack([example["input_ids"] for example in examples])
+        input_ids = torch.stack([example["input_ids"] for example in examples])     #Combine all caption tensors into one per batch
         return {"pixel_values": pixel_values, "input_ids": input_ids}
     
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=collate_fn
+        collate_fn=collate_fn   #Called on each batch when enumerating through dataloader
     )
 
     num_update_steps_in_epoch = math.ceil(int(len(train_dataloader)) / gradient_accumulation_steps)
@@ -299,4 +302,60 @@ def main():
     )
 
     #training loop
-    
+    for epoch in range(first_epoch, num_epochs):
+        unet.train()
+        train_loss = 0.0
+        for step, batch in enumerate(train_dataloader):
+            with accelerator.accumulate(unet):
+                latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+                latents = latents * 0.18215
+                encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                noise = torch.randn_like(latents)
+                bat_sz = latents.shape[0]   #This might not always be the batch size we set if the length of our dataset is not perfectly divisible
+                timesteps = torch.randn(0, noise_scheduler.config.num_train_timesteps, (bat_sz), device=torch_device)
+                latents = noise_scheduler.add_noise(latents, noise, timesteps)
+                target = noise
+                unet_pred = unet(latents, timesteps, encoder_hidden_states).sample
+                loss = F.mse_loss(unet_pred.float(), target.float(), reduction="mean")
+                avg_loss = loss.repeat(batch_size).mean()
+                train_loss += avg_loss.item() / gradient_accumulation_steps
+                accelerator.backward(loss)
+                params_to_clip = lora_layers.parameters()
+                accelerator.clip_grad_norm_(params_to_clip, max_grad_norm)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+            
+            progress_bar.update(1)
+            global_step += 1
+            accelerator.log({"training loss": train_loss}, step=global_step)
+            train_loss = 0.0
+
+            #Save checkpoint if applicable for training step
+            if global_step % args.save_checkpoint_steps == 0:
+                if args.limit_saved_checkpoints is not None:
+                    checkpoints = os.listdir(args.output_dir)
+                    checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
+                    checkpoints = sorted(checkpoints, key=lambda name: int(name.split("-")[1]))
+                    if len(checkpoints) >= args.limit_saved_checkpoints:
+                        index_remove_until = len(checkpoints) - args.limit_saved_checkpoints + 1
+                        remove_checkpoints = checkpoints[0:index_remove_until]
+                        
+                        logger.info(
+                                    f"{len(checkpoints)} checkpoints already exist, removing {len(remove_checkpoints)} checkpoints"
+                                )
+                        logger.info(f"removing checkpoints: {', '.join(remove_checkpoints)}")
+
+                        for removing_checkpoint in remove_checkpoints:
+                            removing_checkpoint = os.path.join(args.output_dir, removing_checkpoint)
+                            shutil.rmtree(removing_checkpoint)
+
+                save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
+                accelerator.save_state(save_path)
+                logger.info(f"Saved state to {save_path}")
+            
+            logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            progress_bar.set_postfix(**logs)
+
+            if global_step >= args.max_train_steps:
+                break             
