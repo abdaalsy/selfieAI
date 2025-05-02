@@ -1,4 +1,5 @@
 #Adapted from https://github.com/huggingface/diffusers/blob/dd9a5caf61f04d11c0fa9f3947b69ab0010c9a0f/examples/text_to_image/train_text_to_image_lora.py
+#Shed ~600 lines of code and learned a ton about diffusion model architecture, training, and lora in the process.
 
 import argparse
 import logging
@@ -53,7 +54,7 @@ def parse_args():
         default=None,
         help="Path to the folder where the newly created LoRA weights will be stored."
     )
-    parser.add_argument(        #Need this since I'm on an RTX 3060 ti
+    parser.add_argument(        #Need this cus I'm on a 30 series gpu
         "--allow_tf32",
         action="store_true",
         help=(
@@ -111,6 +112,7 @@ def main():
     accelerator_project_config = ProjectConfiguration(args.output_dir, args.logging_dir)
 
     seed = 0
+    resolution = (512, 384)
     learning_rate = 1e-4
     beta1 = 0.9
     beta2 = 0.999
@@ -217,8 +219,8 @@ def main():
     
     #Preprocess dataset
     train_transforms = transforms.Compose(
-        transforms.Resize((512, 512), interpolation=transforms.InterpolationMode.BILINEAR),
-        transforms.CenterCrop((512, 512)),
+        transforms.Resize(resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.CenterCrop(resolution),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(0.5, 0.5)
@@ -302,8 +304,8 @@ def main():
     )
 
     #training loop
+    unet.train()
     for epoch in range(first_epoch, num_epochs):
-        unet.train()
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(unet):

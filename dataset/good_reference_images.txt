@@ -5,22 +5,22 @@ don't need to be varied for every photo.
 Let's take 30 reference images. With some varying between images, this should provide great results.
 
                 Angle   Background      Lighting        Outfit  	    Pose
-image 1:        high    building        indoor  	    outfit 2        pose 3
-image 2:        high    building        indoor  	    outfit 1        pose 2
-image 3:        high    outdoor 	    sunlight        outfit 2        pose 2
+image 1:        high    building        indoor  	outfit 2        pose 3
+image 2:        high    building        indoor  	outfit 1        pose 2
+image 3:        high    outdoor 	sunlight        outfit 2        pose 2
 image 4:        low     building        sunlight        outfit 2        pose 2
 image 5:        high    building        sunlight        outfit 3        pose 2
-image 6:        low     building        indoor  	    outfit 2        pose 2
-image 7:        high    outdoor 	    sunlight        outfit 2        pose 1
-image 8:        level   home    	    sunlight        outfit 2        pose 2
+image 6:        low     building        indoor  	outfit 2        pose 2
+image 7:        high    outdoor 	sunlight        outfit 2        pose 1
+image 8:        level   home    	sunlight        outfit 2        pose 2
 image 9:        low     building        sunlight        outfit 1        pose 2
-image 10:       high    home    	    sunlight        outfit 3        pose 1
-image 11:       high    outdoor 	    indoor  	    outfit 1        pose 3
-image 12:       high    outdoor 	    indoor  	    outfit 3        pose 3
-image 13:       level   home    	    sunlight        outfit 1        pose 3
+image 10:       high    home    	sunlight        outfit 3        pose 1
+image 11:       high    outdoor 	indoor  	outfit 1        pose 3
+image 12:       high    outdoor 	indoor  	outfit 3        pose 3
+image 13:       level   home    	sunlight        outfit 1        pose 3
 image 14:       high    building        sunlight        outfit 3        pose 2
-image 15:       high    home    	    indoor  	    outfit 2        pose 3
-image 16:       level   outdoor 	    sunlight        outfit 1        pose 1
+image 15:       high    home    	indoor  	outfit 2        pose 3
+image 16:       level   outdoor 	sunlight    	outfit 1        pose 1
 image 17:       level   building        sunlight        outfit 1        pose 2
 image 18:       low     building        indoor  	    outfit 2        pose 3
 image 19:       level   building        indoor  	    outfit 1        pose 3
