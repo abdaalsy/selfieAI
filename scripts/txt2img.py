@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument(
         "--height",
         type=check_positive,
-        default=512,
+        default=384,
         required=False,
         help="Output image height."
     )
@@ -79,13 +79,13 @@ def parse_args():
         required=False,
         help="Path to the folder containing the image generation model."
     )
-    # parser.add_argument(
-    #     "-sl", "--selfie_lora_path",
-    #     type=check_lora,
-    #     default="../lora/selfie_lora/selfie_lora.safetensors",
-    #     required=False,
-    #     help="The path to the .safetensors file containing the LoRA weights for selfie_lora"
-    # )
+    parser.add_argument(
+        "-sl", "--selfie_lora_path",
+        type=check_lora,
+        default="./selfie_lora/pytorch_lora_weights.safetensors",
+        required=False,
+        help="The path to the .safetensors file containing the LoRA weights for selfie_lora"
+    )
     parser.add_argument(
         "-s", "--seed",
         type=int,
@@ -96,7 +96,7 @@ def parse_args():
     parser.add_argument(
         "-d", "--device",
         type=check_device,
-        default="cpu",
+        default="cuda",
         required=False,
         help="(cuda/cpu) Device that tensors will be stored on. Use \"cuda\" for faster image generation if you have a GPU with cuda 11.8 or 12.1"
     )

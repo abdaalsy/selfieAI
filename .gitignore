@@ -2,3 +2,4 @@
 /stable-diffusion-webui
 /RealisticVision
 /dataset/img*
+/dataset/metadata.csv

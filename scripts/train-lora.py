@@ -21,11 +21,11 @@ from transformers import CLIPTokenizer, CLIPTextModel
 from datasets import load_dataset
 from torchvision import transforms
 from diffusers.optimization import get_constant_schedule_with_warmup
+from diffusers.models.attention_processor import LoRAAttnProcessor2_0
 import torch.nn.functional as F
 
 import diffusers
 from diffusers import UNet2DConditionModel, UniPCMultistepScheduler, AutoencoderKL
-from diffusers.models.attention_processor import LoRAAttnProcessor
 from diffusers.loaders import AttnProcsLayers
 
 logger = get_logger(__name__, log_level="INFO")
@@ -63,15 +63,6 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--logging_dir",
-        type=str,
-        default="logs",
-        help=(
-            "[TensorBoard](https://www.tensorflow.org/tensorboard) log directory. Will default to"
-            " *output_dir/runs/**CURRENT_DATETIME_HOSTNAME***."
-        ),
-    )
-    parser.add_argument(
         "--save_checkpoint_steps",
         default=500,
         type=int,
@@ -86,12 +77,11 @@ def parse_args():
         help="Limit for number of saved checkpoints."
     )
     parser.add_argument(
-        "--max_train_samples",
+        "--max_train_steps",
         type=int,
         default=None,
         help=(
-            "For debugging purposes or quicker training, truncate the number of training examples to this "
-            "value if set."
+            "For debugging purposes decrease the number of training steps to this value if set."
         ),
     )
     parser.add_argument(
@@ -107,12 +97,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logging_dir = Path(args.output_dir, args.logging_dir)
 
     accelerator_project_config = ProjectConfiguration(args.output_dir, args.logging_dir)
 
     seed = 0
-    resolution = (512, 384)
+    height = 384
+    width = 512
     learning_rate = 1e-4
     beta1 = 0.9
     beta2 = 0.999
@@ -123,11 +113,11 @@ def main():
     num_epochs = 20
     warmup_steps = 500
     max_grad_norm = 1.0
+    rank = 4
 
     accelerator = Accelerator(
         gradient_accumulation_steps=1,
         mixed_precision="fp16",
-        log_with="tensorboard",
         project_config=accelerator_project_config
     )
     logging.basicConfig(
@@ -142,12 +132,12 @@ def main():
     diffusers.utils.logging.set_verbosity_info()    #diffusers will log info and higher
 
     set_seed(seed)
-    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
-    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
-    noise_scheduler = UniPCMultistepScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
-    text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
-    tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
-    unet.required_grad_(False)      # free up memory by freezing model parameters. The model itself is not being trained with LoRA
+    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_path, subfolder="unet")
+    vae = AutoencoderKL.from_pretrained(args.pretrained_model_path, subfolder="vae")
+    noise_scheduler = UniPCMultistepScheduler.from_pretrained(args.pretrained_model_path, subfolder="scheduler")
+    text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_path, subfolder="text_encoder")
+    tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_path, subfolder="tokenizer")
+    unet.requires_grad_(False)      # free up memory by freezing model parameters. The model itself is not being trained with LoRA
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
 
@@ -157,7 +147,7 @@ def main():
     vae.to(accelerator.device, dtype=weight_dtype)
     text_encoder.to(accelerator.device, dtype=weight_dtype)
 
-     # Set correct lora layers
+    # Set correct lora layers
     lora_attn_procs = {}
     for name in unet.attn_processors.keys():
         cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
@@ -170,16 +160,17 @@ def main():
             block_id = int(name[len("down_blocks.")])
             hidden_size = unet.config.block_out_channels[block_id]
 
-        lora_attn_procs[name] = LoRAAttnProcessor(
+        lora_attn_procs[name] = LoRAAttnProcessor2_0(
             hidden_size=hidden_size,
             cross_attention_dim=cross_attention_dim,
-            rank=args.rank,
+            rank=rank,
         )
     unet.set_attn_processor(lora_attn_procs)
     lora_layers = AttnProcsLayers(unet.attn_processors)
 
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+
     if args.allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -192,12 +183,9 @@ def main():
         weight_decay=weight_decay
     )
 
-    data_files = {}
-    if args.dataset_path is not None:
-        data_files["train"] = os.path.join(args.dataset_path, "**")
     dataset = load_dataset(
         "imagefolder",
-        data_files=data_files
+        data_dir=args.dataset_path,
     )
     column_names = dataset["train"].column_names
     image_column = column_names[0]
@@ -205,7 +193,7 @@ def main():
 
     def tokenize_captions(examples, is_train=True):
         captions = []
-        for caption in examples[caption_column]:
+        for caption in examples:
             if isinstance(caption, str):
                 captions.append(caption)
             elif isinstance(caption, (list, numpy.ndarray)):
@@ -218,22 +206,19 @@ def main():
         return inputs.input_ids
     
     #Preprocess dataset
-    train_transforms = transforms.Compose(
-        transforms.Resize(resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-        transforms.CenterCrop(resolution),
+    train_transforms = transforms.Compose([
+        transforms.Resize((height, width), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.CenterCrop((height, width)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(0.5, 0.5)
-    )
+    ])
 
     def preprocess_train(examples):
         images = [image.convert("RGB") for image in examples[image_column]]
         examples["pixel_values"] = [train_transforms(image) for image in images]
         examples["input_ids"] = [token for token in tokenize_captions(examples[caption_column])]
         return examples
-    
-    if args.max_train_samples is not None:
-        dataset["train"] = dataset["train"].shuffle(seed=seed).select(range(args.max_train_samples))    #Selecting based on number of training rows we are using
     train_dataset = dataset["train"].with_transform(preprocess_train)
 
     def collate_fn(examples):
@@ -254,7 +239,6 @@ def main():
 
     lr_scheduler = get_constant_schedule_with_warmup(
         optimizer=optimizer,
-        num_training_steps=max_train_steps,
         num_warmup_steps=warmup_steps
     )
 
@@ -314,7 +298,7 @@ def main():
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 noise = torch.randn_like(latents)
                 bat_sz = latents.shape[0]   #This might not always be the batch size we set if the length of our dataset is not perfectly divisible
-                timesteps = torch.randn(0, noise_scheduler.config.num_train_timesteps, (bat_sz), device=torch_device)
+                timesteps = torch.randint(low=0, high=noise_scheduler.config.num_train_timesteps, size=(bat_sz,), device=torch_device)
                 latents = noise_scheduler.add_noise(latents, noise, timesteps)
                 target = noise
                 unet_pred = unet(latents, timesteps, encoder_hidden_states).sample

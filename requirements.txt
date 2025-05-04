@@ -1,10 +1,10 @@
-torch
-torchvision
-torchaudio
-transformers 
-diffusers 
-accelerate
-safetensors
+torch --index-url https://download.pytorch.org/whl/cu121
+torchvision --index-url https://download.pytorch.org/whl/cu121
+torchaudio --index-url https://download.pytorch.org/whl/cu121
+diffusers==0.25.0
+transformers==4.39.3
+huggingface_hub==0.22.2
+accelerate==0.29.2
+safetensors==0.4.2
 tqdm
-numpy
 datasets
